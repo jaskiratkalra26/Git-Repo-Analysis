@@ -12,7 +12,10 @@ def get_github_token() -> str | None:
     Returns:
         str | None: The GitHub token if found, otherwise None.
     """
-    return os.environ.get("GITHUB_TOKEN")
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        return None
+    return token
 
 def get_clone_dir() -> Path:
     """

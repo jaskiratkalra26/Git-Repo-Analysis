@@ -9,6 +9,7 @@ from core.project_loader import ProjectLoader
 from scanner.directory_scanner import DirectoryScanner
 from scanner.file_collector import FileCollector
 from scanner.readme_extractor import ReadmeExtractor
+from analyzers.analysis_engine import AnalysisEngine
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -85,6 +86,38 @@ def main():
                 print("No supported code files found.")
 
             print(f"\nREADME found: {'Yes' if readme_path else 'No'}")
+
+            # --- Phase 3: Static Analysis ---
+            print("\nStarting Phase-3: Rule-based Static Analysis...")
+
+            engine = AnalysisEngine()
+            analysis_results = engine.analyze_project(code_files)
+
+            # Summary stats
+            total_issues = 0
+            file_issue_counts = []
+
+            for res in analysis_results:
+                count = len(res["issues"])
+                total_issues += count
+                if count > 0:
+                    try:
+                        rel_path = os.path.relpath(res["file"], project_path)
+                    except ValueError:
+                        rel_path = res["file"]
+                    file_issue_counts.append((rel_path, count))
+
+            # Sort by issue count descending
+            file_issue_counts.sort(key=lambda x: x[1], reverse=True)
+
+            print("\n## Analysis Complete\n")
+            print(f"Files analyzed: {len(code_files)}")
+            print(f"Total issues found: {total_issues}")
+
+            if file_issue_counts:
+                print("\nTop files with most issues:")
+                for fpath, count in file_issue_counts[:5]:
+                    print(f"- {fpath} ({count} issues)")
 
         else:
             logger.error("Project validation failed. The cloned directory might be empty or invalid.")
