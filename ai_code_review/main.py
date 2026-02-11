@@ -10,6 +10,7 @@ from scanner.directory_scanner import DirectoryScanner
 from scanner.file_collector import FileCollector
 from scanner.readme_extractor import ReadmeExtractor
 from analyzers.analysis_engine import AnalysisEngine
+from ai_engine.ai_reviewer import AIReviewer
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -118,6 +119,27 @@ def main():
                 print("\nTop files with most issues:")
                 for fpath, count in file_issue_counts[:5]:
                     print(f"- {fpath} ({count} issues)")
+
+            # --- Phase 4: AI Review ---
+            if os.getenv("GEMINI_API_KEY"):
+                print("\nStarting Phase-4: AI-Powered Code Review...")
+                
+                ai_reviewer = AIReviewer()
+                ai_recommendations = ai_reviewer.generate_ai_review(analysis_results, readme_content)
+
+                print(f"\nAI Review Completed using Gemini 2.5 Flash")
+                print(f"Files reviewed by AI: {len(ai_recommendations)}")
+                
+                if ai_recommendations:
+                    print("\nAI Recommendations generated for:")
+                    for item in ai_recommendations:
+                        try:
+                            rel_path = os.path.relpath(item["file"], project_path)
+                        except ValueError:
+                            rel_path = item["file"]
+                        print(f"- {rel_path}")
+            else:
+                print("\nSkipping Phase-4: GEMINI_API_KEY not found. Analysis limited to rule-based tests.")
 
         else:
             logger.error("Project validation failed. The cloned directory might be empty or invalid.")

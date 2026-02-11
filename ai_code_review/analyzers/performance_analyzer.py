@@ -18,15 +18,6 @@ class PerformanceAnalyzer(BaseAnalyzer):
             while loop_stack and indent <= loop_stack[-1]:
                 loop_stack.pop()
 
-            # A) Deep Nesting Check
-            # Assume 4 spaces per level. > 3 levels means > 12 spaces.
-            if indent > 12:
-                issues.append({
-                    "type": "performance",
-                    "severity": "medium",
-                    "message": "Deep nesting detected, may impact readability/performance",
-                    "line": i + 1
-                })
 
             # B) Nested Loop Check
             if stripped.startswith("for ") and stripped.endswith(":"):
