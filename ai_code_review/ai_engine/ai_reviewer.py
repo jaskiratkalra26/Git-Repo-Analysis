@@ -1,8 +1,13 @@
 import os
+import sys
 import logging
 from typing import List, Dict, Optional
 import google.generativeai as genai
 from .prompt_builder import PromptBuilder
+
+# Add root directory to path to import Config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from Config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +24,7 @@ class AIReviewer:
             api_key (str, optional): The Gemini API key. If not provided, 
                                      looks for GEMINI_API_KEY env var.
         """
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
+        self.api_key = api_key or os.getenv(Config.ENV_GEMINI_API_KEY)
         self.client = None
         self.model = None
         self.prompt_builder = PromptBuilder()
@@ -27,17 +32,18 @@ class AIReviewer:
         if self.api_key:
             try:
                 genai.configure(api_key=self.api_key)
-                self.model = genai.GenerativeModel("gemini-2.5-flash")
-                logger.info("Gemini 2.5 Flash model initialized successfully.")
+                self.model = genai.GenerativeModel(Config.GEMINI_MODEL_NAME)
+                logger.info(f"{Config.GEMINI_MODEL_NAME} model initialized successfully.")
             except Exception as e:
                 logger.error(f"Failed to initialize Gemini model: {e}")
                 self.model = None # Fallback logic will trigger if model is None
         else:
-            logger.warning("GEMINI_API_KEY not found. Helper will run in fallback mode.")
+            logger.warning(f"{Config.ENV_GEMINI_API_KEY} not found. Helper will run in fallback mode.")
 
-    def select_top_problem_files(self, analysis_results: List[Dict], top_n: int = 3) -> List[Dict]:
+    def select_top_problem_files(self, analysis_results: List[Dict], top_n: int = Config.AI_TOP_PROBLEM_FILES) -> List[Dict]:
         """
         Selects the top N files with the most issues.
+        Only considers files that actually have issues.
 
         Args:
             analysis_results (List[Dict]): Phase-3 analysis results.
@@ -46,10 +52,12 @@ class AIReviewer:
         Returns:
             List[Dict]: The top problematic files.
         """
+        # Filter out files with no issues
+        problem_files = [res for res in analysis_results if len(res.get("issues", [])) > 0]
+        
         # Sort files by number of issues (descending)
-        # Assuming result format: {'file': 'path', 'issues': [...]}
         sorted_files = sorted(
-            analysis_results, 
+            problem_files, 
             key=lambda x: len(x.get("issues", [])), 
             reverse=True
         )
@@ -57,7 +65,7 @@ class AIReviewer:
 
     def read_file_safely(self, file_path: str) -> str:
         """
-        Reads the first 300-400 lines of a file safely.
+        Reads the first few lines of a file safely.
 
         Args:
             file_path (str): Path to the file.
@@ -68,7 +76,7 @@ class AIReviewer:
         try:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 lines = []
-                for _ in range(400):
+                for _ in range(Config.MAX_AI_CONTEXT_LINES):
                     line = f.readline()
                     if not line:
                         break

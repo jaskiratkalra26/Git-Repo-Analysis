@@ -1,12 +1,18 @@
 import pathlib
+import sys
+import os
 from typing import List, Dict
+
+# Add root directory to path to import Config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from Config import Config
 
 class FileCollector:
     """
     Filters and categorizes files from a list of file paths.
     """
 
-    SUPPORTED_EXTENSIONS = {'.py', '.js', '.java', '.cpp', '.ts'}
+    SUPPORTED_EXTENSIONS = Config.SUPPORTED_EXTENSIONS
 
     def __init__(self, files: List[str]):
         """

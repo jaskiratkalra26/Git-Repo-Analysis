@@ -1,5 +1,11 @@
 import logging
+import sys
+import os
 from typing import List, Dict, Any
+
+# Add root directory to path to import Config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from Config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -9,29 +15,13 @@ class ScoreEngine:
     """
 
     def __init__(self):
-        self.issue_penalties = {
-            "quality": {
-                "low": -1,
-                "medium": -3,
-                "high": -5
-            },
-            "security": {
-                "low": -5, 
-                "medium": -5,
-                "high": -10
-            },
-            "performance": {
-                "low": -2,
-                "medium": -4,
-                "high": -4 
-            }
-        }
+        self.issue_penalties = Config.ISSUE_PENALTIES
     
     def _calculate_file_metrics(self, issues: List[Dict[str, Any]]) -> tuple[int, Dict[str, int]]:
         """
         Helper to calculate both score and issue breakdown in a single loop.
         """
-        score = 100
+        score = Config.INITIAL_FILE_SCORE
         breakdown = {"quality": 0, "security": 0, "performance": 0}
         
         for issue in issues:
@@ -47,22 +37,12 @@ class ScoreEngine:
             
             # Calculate Penalty
             penalty = 0
-            if issue_type == "quality":
-                penalty = self.issue_penalties["quality"].get(severity, -1)
-            elif issue_type == "security":
-                if severity == "high":
-                    penalty = -10
-                elif severity == "medium":
-                    penalty = -5
-                else: 
-                    penalty = -2 
-            elif issue_type == "performance":
-                if severity == "medium":
-                    penalty = -4
-                elif severity == "low":
-                    penalty = -2
-                else:
-                    penalty = -4
+            if issue_type in self.issue_penalties:
+                penalty = self.issue_penalties[issue_type].get(severity, 0) # Default to 0 if severity not found
+            else:
+                # Fallback for unknown types if any? Or standard default?
+                # Keeping it 0 for unknown types safe
+                pass
 
             score += penalty 
 
@@ -83,8 +63,8 @@ class ScoreEngine:
         total_files = len(analysis_results)
         if total_files == 0:
             return {
-                "overall_score": 100,
-                "average_file_score": 100,
+                "overall_score": Config.INITIAL_FILE_SCORE,
+                "average_file_score": Config.INITIAL_FILE_SCORE,
                 "total_issues": 0,
                 "issue_breakdown": {
                     "quality": 0,

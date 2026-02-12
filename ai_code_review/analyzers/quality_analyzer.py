@@ -1,4 +1,10 @@
 from .base_analyzer import BaseAnalyzer
+import sys
+import os
+
+# Add root directory to path to import Config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from Config import Config
 
 class QualityAnalyzer(BaseAnalyzer):
     def analyze(self, file_path: str, content: str) -> list[dict]:
@@ -6,7 +12,7 @@ class QualityAnalyzer(BaseAnalyzer):
         lines = content.splitlines()
 
         # A) Large File Check
-        if len(lines) > 400:
+        if len(lines) > Config.MAX_FILE_LINES:
             issues.append({
                 "type": "quality",
                 "severity": "medium",
@@ -32,7 +38,7 @@ class QualityAnalyzer(BaseAnalyzer):
                             # Note: this fails on defaults with commas e.g. func(a=[1,2])
                             # But per "Keep logic simple", this is acceptable for now.
                             param_count = params_str.count(',') + 1
-                            if param_count > 5:
+                            if param_count > Config.MAX_FUNCTION_PARAMS:
                                 issues.append({
                                     "type": "quality",
                                     "severity": "medium",
@@ -86,7 +92,7 @@ class QualityAnalyzer(BaseAnalyzer):
                 # Or just use the counted body lines? "Function too long".
                 # Let's use total lines spanned.
                 
-                if total_func_lines > 50:
+                if total_func_lines > Config.MAX_FUNCTION_LINES:
                     issues.append({
                         "type": "quality",
                         "severity": "medium",
