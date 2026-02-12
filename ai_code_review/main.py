@@ -11,6 +11,9 @@ from scanner.file_collector import FileCollector
 from scanner.readme_extractor import ReadmeExtractor
 from analyzers.analysis_engine import AnalysisEngine
 from ai_engine.ai_reviewer import AIReviewer
+from reporting.score_engine import ScoreEngine
+from reporting.report_builder import ReportBuilder
+from reporting.export_manager import ExportManager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -121,6 +124,7 @@ def main():
                     print(f"- {fpath} ({count} issues)")
 
             # --- Phase 4: AI Review ---
+            ai_recommendations = []
             if os.getenv("GEMINI_API_KEY"):
                 print("\nStarting Phase-4: AI-Powered Code Review...")
                 
@@ -140,6 +144,39 @@ def main():
                         print(f"- {rel_path}")
             else:
                 print("\nSkipping Phase-4: GEMINI_API_KEY not found. Analysis limited to rule-based tests.")
+
+            # --- Phase 5: Reporting ---
+            print("\nStarting Phase-5: Generating Final Report...")
+            
+            # 1. Initialize ScoreEngine & Calculate Scores
+            score_engine = ScoreEngine()
+            score_data = score_engine.calculate_project_score(analysis_results)
+            
+            # 2. Prepare Metadata
+            scan_metadata = {
+                "total_files": scan_result['total_files'],
+                "total_directories": scan_result['total_directories'],
+                "code_files_count": len(code_files) 
+            }
+            
+            # 3. Initialize ReportBuilder & Generate Report
+            report_builder = ReportBuilder()
+            final_report = report_builder.build_final_report(
+                analysis_results, 
+                ai_recommendations, 
+                scan_metadata, 
+                score_data
+            )
+            
+            # 4. Initialize ExportManager & Save Report
+            export_manager = ExportManager()
+            reports_dir = os.path.abspath("reports")
+            
+            export_manager.export_to_json(final_report, os.path.join(reports_dir, "project_report.json"))
+            export_manager.export_to_txt(final_report, os.path.join(reports_dir, "project_report.txt"))
+            
+            print("\nFinal Report Generated Successfully")
+            print(f"Location: {os.path.join(reports_dir, 'project_report.txt')}")
 
         else:
             logger.error("Project validation failed. The cloned directory might be empty or invalid.")
